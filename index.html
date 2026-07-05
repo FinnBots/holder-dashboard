@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinnBots Holder Dashboard</title>
+<meta name="description" content="Check your $OIL balance and Bot holdings.">
+<link rel="icon" href="https://arweave.net/_cPSCheRvzVBlZK7QwM-3nXtteMdBbUn-zJhbGRlMmo/106.png">
+<style>
+  /* ===== MDL v1 — Martin Design Language tokens ===== */
+  :root {
+    --bg-base: #F2F2F7;
+    --bg-elevated: #FFFFFF;
+    --bg-overlay: rgba(255,255,255,0.72);
+    --label-primary: #1C1C1E;
+    --label-secondary: rgba(60,60,67,0.80);
+    --label-tertiary: rgba(60,60,67,0.60);
+    --label-quaternary: rgba(60,60,67,0.06);
+    --accent-blue: #007AFF;
+    --accent-green: #34C759;
+    --accent-orange: #FF9500;
+    --accent-red: #FF3B30;
+    --separator: rgba(60,60,67,0.29);
+
+    --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+    --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px; --space-12: 48px;
+
+    --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-xl: 22px; --radius-pill: 9999px;
+
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.10);
+    --shadow-lg: 0 12px 32px rgba(0,0,0,0.12);
+
+    --ease-spring: cubic-bezier(0.34,1.56,0.64,1);
+    --ease-smooth: cubic-bezier(0.4,0,0.2,1);
+    --duration-fast: 150ms; --duration-normal: 250ms; --duration-slow: 400ms;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-base: #1C1C1E;
+      --bg-elevated: #2C2C2E;
+      --bg-overlay: rgba(28,28,30,0.80);
+      --label-primary: #FFFFFF;
+      --label-secondary: rgba(235,235,245,0.80);
+      --label-tertiary: rgba(235,235,245,0.48);
+      --label-quaternary: rgba(235,235,245,0.08);
+      --accent-blue: #0A84FF;
+      --accent-green: #30D158;
+      --accent-orange: #FF9F0A;
+      --accent-red: #FF453A;
+      --separator: rgba(84,84,88,0.65);
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg-base);
+    color: var(--label-primary);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: var(--space-8) var(--space-4) var(--space-12);
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-bottom: var(--space-8);
+  }
+  .header img.logo {
+    width: 48px; height: 48px;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+  }
+  .header h1 {
+    font-size: 22px; font-weight: 600; letter-spacing: -0.2px;
+    margin: 0;
+  }
+  .header p {
+    margin: 2px 0 0; font-size: 13px; color: var(--label-tertiary);
+  }
+
+  /* Wallet bar */
+  .wallet-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    background: var(--bg-elevated);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: var(--space-4) var(--space-6);
+    margin-bottom: var(--space-6);
+  }
+  .wallet-bar .addr {
+    font-size: 13px;
+    color: var(--label-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 22px; padding: 0 var(--space-2);
+    border-radius: var(--radius-pill);
+    font-size: 12px; font-weight: 600;
+  }
+  .status-badge.connected { background: rgba(52,199,89,0.15); color: var(--accent-green); }
+  .status-badge.disconnected { background: rgba(60,60,67,0.10); color: var(--label-tertiary); }
+  .status-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  button.btn-primary {
+    background: var(--accent-blue);
+    color: white;
+    font-size: 15px; font-weight: 600;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: opacity var(--duration-fast) var(--ease-smooth), transform var(--duration-fast) var(--ease-smooth);
+  }
+  button.btn-primary:active { opacity: 0.85; transform: scale(0.98); }
+  button.btn-primary:disabled { opacity: 0.5; cursor: default; }
+
+  button.btn-secondary {
+    background: var(--label-quaternary);
+    color: var(--label-primary);
+    font-size: 13px; font-weight: 600;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 8px 14px;
+    cursor: pointer;
+  }
+
+  /* KPI grid */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--space-6);
+    margin-bottom: var(--space-8);
+  }
+  .kpi-card {
+    background: var(--bg-elevated);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: var(--space-6);
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  .kpi-card .label {
+    font-size: 12px; font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--label-secondary);
+    margin-bottom: var(--space-2);
+  }
+  .kpi-card .value {
+    font-size: 34px; font-weight: 700; letter-spacing: -0.4px;
+    font-variant-numeric: tabular-nums;
+    color: var(--label-primary);
+    line-height: 1.1;
+  }
+  .kpi-card .caption {
+    margin-top: var(--space-2);
+    font-size: 12px;
+    color: var(--label-tertiary);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .kpi-card.in {
+      animation: cardIn var(--duration-slow) var(--ease-spring) forwards;
+    }
+    @keyframes cardIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .kpi-card { opacity: 1; transform: none; }
+  }
+
+  /* Bots section */
+  .section-title {
+    font-size: 17px; font-weight: 600; letter-spacing: -0.1px;
+    margin: 0 0 var(--space-4);
+  }
+  .bots-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+    gap: var(--space-3);
+    margin-bottom: var(--space-8);
+  }
+  .bot-tile {
+    background: var(--bg-elevated);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    text-align: center;
+  }
+  .bot-tile .img-wrap {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: var(--label-quaternary);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .bot-tile img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  .bot-tile .swatch {
+    font-size: 13px; font-weight: 700;
+    color: var(--label-tertiary);
+  }
+  .bot-tile .num {
+    font-size: 12px; color: var(--label-tertiary);
+    padding: 6px 0;
+  }
+
+  .empty-state, .info-state {
+    background: var(--bg-elevated);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    padding: var(--space-6);
+    text-align: center;
+    color: var(--label-secondary);
+    font-size: 14px;
+    margin-bottom: var(--space-8);
+  }
+  .info-state.error { color: var(--accent-red); }
+
+  /* Game link card */
+  .game-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    background: var(--bg-elevated);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: var(--space-6);
+    text-decoration: none;
+    color: inherit;
+    transition: transform var(--duration-normal) var(--ease-smooth), box-shadow var(--duration-normal) var(--ease-smooth);
+  }
+  .game-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+  .game-card .t {
+    font-size: 15px; font-weight: 600;
+  }
+  .game-card .s {
+    font-size: 13px; color: var(--label-tertiary);
+    margin-top: 2px;
+  }
+  .game-card .arrow {
+    font-size: 20px; color: var(--accent-blue);
+  }
+
+  footer {
+    text-align: center;
+    margin-top: var(--space-12);
+    font-size: 12px;
+    color: var(--label-tertiary);
+  }
+
+  .center-msg { text-align: center; padding: var(--space-10) 0; }
+  .center-msg p { color: var(--label-secondary); font-size: 15px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="header">
+    <img class="logo" src="https://arweave.net/_cPSCheRvzVBlZK7QwM-3nXtteMdBbUn-zJhbGRlMmo/106.png" alt="Bot #106" onerror="this.style.display='none'">
+    <div>
+      <h1>Holder Dashboard</h1>
+      <p>Check your $OIL balance and Bot holdings</p>
+    </div>
+  </div>
+
+  <div class="wallet-bar">
+    <div id="walletInfo">
+      <span class="status-badge disconnected"><span class="dot"></span>Not connected</span>
+    </div>
+    <div id="walletActions">
+      <button class="btn-primary" id="connectBtn">Connect wallet</button>
+    </div>
+  </div>
+
+  <div id="content" style="display:none;">
+
+    <div class="kpi-grid" id="kpiGrid">
+      <div class="kpi-card" id="kpiOil">
+        <div class="label">$OIL balance</div>
+        <div class="value" id="oilValue">—</div>
+        <div class="caption">Live wallet balance</div>
+      </div>
+      <div class="kpi-card" id="kpiBots">
+        <div class="label">Bots held</div>
+        <div class="value" id="botsValue">—</div>
+        <div class="caption">Across all three editions</div>
+      </div>
+      <div class="kpi-card" id="kpiRate">
+        <div class="label">Daily earn rate</div>
+        <div class="value" id="rateValue">—</div>
+        <div class="caption">Accrues daily, paid out in the weekly batch — not instant</div>
+      </div>
+    </div>
+
+    <h2 class="section-title">Your Bots</h2>
+    <div id="botsSection">
+      <div class="empty-state" id="botsEmpty" style="display:none;">
+        No Bots found in this wallet yet.
+      </div>
+      <div class="bots-grid" id="botsGrid"></div>
+    </div>
+
+  </div>
+
+  <div class="center-msg" id="preConnectMsg">
+    <p>Connect your wallet to see your $OIL balance and Bots.</p>
+  </div>
+
+  <a class="game-card" href="https://play.finnstergram.com" target="_blank" rel="noopener">
+    <div>
+      <div class="t">Play Pick-a-Bot →</div>
+      <div class="s">Spend $OIL for a shot at 200–300 OIL</div>
+    </div>
+    <div class="arrow">↗</div>
+  </a>
+
+  <footer>FinnBots · $OIL is a utility token with no promise of value or return</footer>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ===== Config — public, non-secret values only =====
+  var RPC_PROXY = 'https://finnbots-rpc.mart-kin1000.workers.dev';
+  var OIL_MINT = 'HrcfXJcFdMoLfbkN5qCTSFrLsAgJNHitmwKc5AyS7xzf';
+  var TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+  var ARWEAVE_BASE = 'https://arweave.net/_cPSCheRvzVBlZK7QwM-3nXtteMdBbUn-zJhbGRlMmo';
+  var EMISSION_RATE = 10; // OIL per Bot per day
+  var BOTS_IDS_URL = 'bots_ids.json'; // { "<mint address>": <bot number>, ... }
+
+  var connectBtn = document.getElementById('connectBtn');
+  var walletInfo = document.getElementById('walletInfo');
+  var walletActions = document.getElementById('walletActions');
+  var content = document.getElementById('content');
+  var preConnectMsg = document.getElementById('preConnectMsg');
+  var oilValue = document.getElementById('oilValue');
+  var botsValue = document.getElementById('botsValue');
+  var rateValue = document.getElementById('rateValue');
+  var botsGrid = document.getElementById('botsGrid');
+  var botsEmpty = document.getElementById('botsEmpty');
+
+  var botsIdsMap = null; // loaded once
+
+  function shortAddr(a) {
+    return a.slice(0, 4) + '…' + a.slice(-4);
+  }
+
+  function showError(msg) {
+    var el = document.createElement('div');
+    el.className = 'info-state error';
+    el.textContent = msg;
+    content.parentNode.insertBefore(el, content.nextSibling);
+  }
+
+  // Raw JSON-RPC call through the Cloudflare Worker proxy.
+  // Deliberately uses plain fetch (no @solana/web3.js Connection object) —
+  // matches the proven holder-check pattern from Pick-a-Bot, avoids the
+  // solana-client CORS header issue entirely since we never build or send
+  // a transaction from this page.
+  function rpc(method, params) {
+    return fetch(RPC_PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: method, params: params })
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (json) {
+        if (json.error) { throw new Error(json.error.message || 'RPC error'); }
+        return json.result;
+      });
+  }
+
+  function loadBotsIdsMap() {
+    if (botsIdsMap) return Promise.resolve(botsIdsMap);
+    return fetch(BOTS_IDS_URL)
+      .then(function (res) {
+        if (!res.ok) throw new Error('bots_ids.json not found');
+        return res.json();
+      })
+      .then(function (json) {
+        botsIdsMap = json;
+        return json;
+      });
+  }
+
+  function getOilBalance(owner) {
+    return rpc('getTokenAccountsByOwner', [
+      owner,
+      { mint: OIL_MINT },
+      { encoding: 'jsonParsed' }
+    ]).then(function (result) {
+      if (!result || !result.value || !result.value.length) return 0;
+      var total = 0;
+      result.value.forEach(function (acc) {
+        var amt = acc.account.data.parsed.info.tokenAmount;
+        total += amt.uiAmount || 0;
+      });
+      return total;
+    });
+  }
+
+  function getHeldBots(owner, botsMap) {
+    return rpc('getTokenAccountsByOwner', [
+      owner,
+      { programId: TOKEN_PROGRAM_ID },
+      { encoding: 'jsonParsed' }
+    ]).then(function (result) {
+      var held = [];
+      if (!result || !result.value) return held;
+      result.value.forEach(function (acc) {
+        var info = acc.account.data.parsed.info;
+        var amt = info.tokenAmount;
+        if (amt.decimals === 0 && Number(amt.amount) >= 1 && botsMap[info.mint] !== undefined) {
+          held.push({ mint: info.mint, number: botsMap[info.mint] });
+        }
+      });
+      held.sort(function (a, b) { return a.number - b.number; });
+      return held;
+    });
+  }
+
+  function renderBots(botList) {
+    botsGrid.innerHTML = '';
+    if (!botList.length) {
+      botsEmpty.style.display = 'block';
+      return;
+    }
+    botsEmpty.style.display = 'none';
+    botList.forEach(function (bot) {
+      var tile = document.createElement('div');
+      tile.className = 'bot-tile';
+
+      var imgWrap = document.createElement('div');
+      imgWrap.className = 'img-wrap';
+
+      var img = document.createElement('img');
+      img.src = ARWEAVE_BASE + '/' + bot.number + '.png';
+      img.alt = 'Bot #' + bot.number;
+      img.loading = 'lazy';
+      img.onerror = function () {
+        imgWrap.innerHTML = '<span class="swatch">#' + bot.number + '</span>';
+      };
+      imgWrap.appendChild(img);
+
+      var num = document.createElement('div');
+      num.className = 'num';
+      num.textContent = '#' + bot.number;
+
+      tile.appendChild(imgWrap);
+      tile.appendChild(num);
+      botsGrid.appendChild(tile);
+    });
+  }
+
+  function animateKpiCards() {
+    var cards = document.querySelectorAll('.kpi-card');
+    cards.forEach(function (card, i) {
+      setTimeout(function () { card.classList.add('in'); }, i * 60);
+    });
+  }
+
+  function loadDashboard(owner) {
+    preConnectMsg.style.display = 'none';
+    content.style.display = 'block';
+    animateKpiCards();
+
+    Promise.all([
+      loadBotsIdsMap().catch(function (err) {
+        showError('Could not load the Bot list (' + err.message + '). Balance will still work.');
+        return {};
+      }),
+      getOilBalance(owner).catch(function (err) {
+        oilValue.textContent = '—';
+        showError('Could not load $OIL balance: ' + err.message);
+        return null;
+      })
+    ]).then(function (results) {
+      var botsMap = results[0];
+      var oilBal = results[1];
+
+      if (oilBal !== null) {
+        oilValue.textContent = oilBal.toLocaleString(undefined, { maximumFractionDigits: 2 });
+      }
+
+      return getHeldBots(owner, botsMap).catch(function (err) {
+        showError('Could not load Bot holdings: ' + err.message);
+        return [];
+      });
+    }).then(function (heldBots) {
+      botsValue.textContent = heldBots.length;
+      rateValue.textContent = (heldBots.length * EMISSION_RATE).toLocaleString() + ' OIL';
+      renderBots(heldBots);
+    });
+  }
+
+  function setConnectedUI(owner) {
+    walletInfo.innerHTML =
+      '<span class="status-badge connected"><span class="dot"></span>' + shortAddr(owner) + '</span>';
+    walletActions.innerHTML = '<button class="btn-secondary" id="disconnectBtn">Disconnect</button>';
+    document.getElementById('disconnectBtn').addEventListener('click', function () {
+      window.location.reload();
+    });
+  }
+
+  connectBtn.addEventListener('click', function () {
+    if (!window.solana || !window.solana.isPhantom) {
+      showError('Phantom wallet not found. Install it from phantom.app, then reload this page.');
+      return;
+    }
+    connectBtn.disabled = true;
+    connectBtn.textContent = 'Connecting…';
+
+    window.solana.connect()
+      .then(function (resp) {
+        var owner = resp.publicKey.toString();
+        setConnectedUI(owner);
+        loadDashboard(owner);
+      })
+      .catch(function () {
+        connectBtn.disabled = false;
+        connectBtn.textContent = 'Connect wallet';
+      });
+  });
+
+  // Attempt silent reconnect if already trusted
+  if (window.solana && window.solana.isPhantom) {
+    window.solana.connect({ onlyIfTrusted: true })
+      .then(function (resp) {
+        var owner = resp.publicKey.toString();
+        setConnectedUI(owner);
+        loadDashboard(owner);
+      })
+      .catch(function () { /* not previously trusted — wait for manual connect */ });
+  }
+})();
+</script>
+
+</body>
+</html>
