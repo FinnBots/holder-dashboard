@@ -344,9 +344,17 @@
 
 </div>
 
+<!-- ?v= query strings are cache-busters: bump on every deploy so no browser
+     (Chrome, Safari, or Phantom's webview) can silently run stale copies. -->
+<script src="phantom-deeplink-libs.min.js?v=20260706b"></script>
+<script src="phantom-mobile.js?v=20260706b"></script>
 <script>
 (function () {
   'use strict';
+
+  // Build tag — bump on every deploy, in lockstep with the ?v= strings above.
+  var BUILD_TAG = 'hd-v2-20260706b';
+  console.log('[holder-dashboard] build', BUILD_TAG);
 
   // ===== Config — public, non-secret values only =====
   var RPC_PROXY = 'https://finnbots-rpc.mart-kin1000.workers.dev';
@@ -530,15 +538,36 @@
     });
   }
 
+  function getProvider(){
+    if(window.phantom && window.phantom.solana && window.phantom.solana.isPhantom) return window.phantom.solana;
+    if(window.solana && window.solana.isPhantom) return window.solana;
+    return null;
+  }
+  function isMobileUA(){
+    return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '');
+  }
+
   connectBtn.addEventListener('click', function () {
-    if (!window.solana || !window.solana.isPhantom) {
+    var provider = getProvider();
+    if (!provider) {
+      // No injected provider. On mobile (Chrome/Edge on iOS never get one —
+      // iOS platform restriction) use Phantom's deeplink connect: jump to the
+      // Phantom app, approve, land back here with an encrypted response we
+      // can decrypt via the key carried in the return URL. Proven pattern
+      // from Pick-a-Bot (6 July 2026).
+      if (window.PhantomMobile && isMobileUA()) {
+        connectBtn.disabled = true;
+        connectBtn.textContent = 'Opening Phantom…';
+        PhantomMobile.connect(window.location.origin + window.location.pathname);
+        return;
+      }
       showError('Phantom wallet not found. Install it from phantom.app, then reload this page.');
       return;
     }
     connectBtn.disabled = true;
     connectBtn.textContent = 'Connecting…';
 
-    window.solana.connect()
+    provider.connect()
       .then(function (resp) {
         var owner = resp.publicKey.toString();
         setConnectedUI(owner);
@@ -550,9 +579,36 @@
       });
   });
 
-  // Attempt silent reconnect if already trusted
-  if (window.solana && window.solana.isPhantom) {
-    window.solana.connect({ onlyIfTrusted: true })
+  // ---- Mobile deeplink resume — runs once per page load ----
+  // Landing back from Phantom (often in a brand-NEW tab of Phantom's own
+  // browser — storage never survives that jump, so everything needed is
+  // carried in the URL and decrypted here). Decrypt FIRST; the injected
+  // provider is only a bonus path for browsers that have it.
+  var phantomAction = new URLSearchParams(window.location.search).get('phantom_action');
+  var rawReturnParams = window.location.search; // captured before any stripping
+  if (phantomAction && window.PhantomMobile) {
+    connectBtn.disabled = true;
+    connectBtn.textContent = 'Finishing connection…';
+    var result = PhantomMobile.consumePendingRedirect();
+    if (result && result.type === 'connect') {
+      setConnectedUI(result.publicKey);
+      loadDashboard(result.publicKey);
+    } else {
+      connectBtn.disabled = false;
+      connectBtn.textContent = 'Connect wallet';
+      var failMsg = (result && result.type === 'error') ? result.message
+        : 'The connection didn\u2019t complete — tap Connect wallet to try again.';
+      showError(failMsg +
+        ' [DIAGNOSTIC ' + BUILD_TAG + ' — screenshot if reporting: ' +
+        (rawReturnParams ? rawReturnParams.slice(0, 600) : '(empty)') + ']');
+    }
+  } else if (window.PhantomMobile && PhantomMobile.hasSession()) {
+    // Same-tab refresh with a live deeplink session — restore silently.
+    var sessOwner = PhantomMobile.getSessionPublicKey();
+    if (sessOwner) { setConnectedUI(sessOwner); loadDashboard(sessOwner); }
+  } else if (getProvider()) {
+    // Attempt silent reconnect if already trusted (extension / Phantom browser)
+    getProvider().connect({ onlyIfTrusted: true })
       .then(function (resp) {
         var owner = resp.publicKey.toString();
         setConnectedUI(owner);
