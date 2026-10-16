@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>FinnBots — Holder Dashboard</title>
+<meta name="description" content="Check your $OIL balance and FinnBot holdings.">
+<link rel="icon" href="https://arweave.net/_cPSCheRvzVBlZK7QwM-3nXtteMdBbUn-zJhbGRlMmo/106.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jersey+15&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ===== FinnBots house style — matches games.finnstergram.com + the game chassis ===== */
+  :root{
+    --plum:#5f4c57; --plum-deep:#3e323a; --bg-soft:#fdf3e7; --peach:#f5c8a0; --card:#fffaf3;
+    --ink:#2a2230; --muted:#6e6470; --electric:#3a6ff7; --amber:#f2a03d; --green:#3f9d5a; --red:#c0392b;
+    --line:rgba(95,76,87,0.16);
+    --btn:#5f4c57; --btn-deep:#3e323a; --btn-fg:#fff;
+    --shadow-sm:0 1px 3px rgba(42,34,48,0.10); --shadow-md:0 6px 18px rgba(42,34,48,0.12); --shadow-lg:0 14px 34px rgba(42,34,48,0.22);
+    --r-sm:8px; --r-md:12px; --r-lg:18px; --r-xl:22px; --r-pill:9999px;
+    --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px; --space-6:24px; --space-8:32px; --space-10:40px; --space-12:48px;
+    --font-display:'Jersey 15', ui-monospace, monospace;
+    --font-body:'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --ease-spring:cubic-bezier(0.34,1.56,0.64,1); --ease-smooth:cubic-bezier(0.4,0,0.2,1);
+    --duration-fast:150ms; --duration-normal:250ms; --duration-slow:400ms;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg-soft:#221b20; --peach:#2c2230; --card:#2f2730; --ink:#f4eef2; --plum:#e8d9e0; --plum-deep:#f4eef2;
+      --muted:#b9aab3; --line:rgba(255,255,255,0.12); --btn:#7a6470; --btn-deep:#8f7684;
+      --shadow-sm:0 1px 3px rgba(0,0,0,0.4); --shadow-md:0 6px 18px rgba(0,0,0,0.42); --shadow-lg:0 14px 34px rgba(0,0,0,0.55); }
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{
+    font-family:var(--font-body); color:var(--ink); line-height:1.4; -webkit-font-smoothing:antialiased;
+    background:radial-gradient(120% 80% at 50% 0%, var(--bg-soft), var(--peach)); background-attachment:fixed;
+    min-height:100dvh; padding: max(20px, env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom));
+  }
+  .wrap{ max-width:720px; margin:0 auto; }
+
+  /* Header — mirrors the game chassis top bar (BOT GAMES pill + Jersey title) */
+  .pill{ display:inline-block; font-family:var(--font-display); font-size:14px; letter-spacing:.5px; color:var(--btn-fg);
+    background:var(--btn); padding:3px 14px; border-radius:var(--r-pill); box-shadow:var(--shadow-sm); }
+  .header{ display:flex; align-items:center; gap:var(--space-4); margin:6px 0 var(--space-6); }
+  .header .icon{ width:56px; height:56px; border-radius:var(--r-lg); box-shadow:var(--shadow-md);
+    background:var(--card); object-fit:cover; image-rendering:pixelated; flex-shrink:0; }
+  .header h1{ font-family:var(--font-display); font-size:30px; letter-spacing:.5px; color:var(--plum-deep); line-height:1; margin-top:6px; }
+  .header p{ margin-top:5px; font-size:13px; color:var(--muted); }
+
+  /* Wallet bar */
+  .wallet-bar{ display:flex; align-items:center; justify-content:space-between; gap:var(--space-3);
+    background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg); box-shadow:var(--shadow-md);
+    padding:var(--space-4) var(--space-5); margin-bottom:var(--space-6); }
+  .status-badge{ display:inline-flex; align-items:center; gap:7px; font-family:var(--font-body); font-weight:600; font-size:13px;
+    height:26px; padding:0 var(--space-3); border-radius:var(--r-pill); }
+  .status-badge .dot{ width:7px; height:7px; border-radius:50%; background:currentColor; }
+  .status-badge.connected{ background:rgba(63,157,90,0.15); color:var(--green); }
+  .status-badge.connected .addr{ font-family:ui-monospace,monospace; }
+  .status-badge.disconnected{ background:rgba(95,76,87,0.10); color:var(--muted); }
+  button.btn-primary{ appearance:none; border:0; cursor:pointer; font-family:var(--font-display); font-size:16px;
+    color:var(--btn-fg); background:var(--btn); padding:9px 20px; border-radius:var(--r-pill); box-shadow:var(--shadow-sm);
+    transition:background var(--duration-fast) var(--ease-smooth), transform var(--duration-fast) var(--ease-smooth); }
+  button.btn-primary:hover{ background:var(--btn-deep); }
+  button.btn-primary:active{ transform:scale(0.98); }
+  button.btn-primary:disabled{ opacity:0.55; cursor:default; }
+  button.btn-secondary{ appearance:none; cursor:pointer; font-family:var(--font-body); font-weight:600; font-size:13px;
+    color:var(--plum); background:transparent; border:1px solid var(--line); padding:8px 15px; border-radius:var(--r-pill); }
+  button.btn-secondary:hover{ border-color:var(--amber); }
+
+  /* KPI grid */
+  .kpi-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:var(--space-4); margin-bottom:var(--space-8); }
+  .kpi-card{ background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg); box-shadow:var(--shadow-md);
+    padding:var(--space-5); opacity:0; transform:translateY(12px); }
+  .kpi-card .label{ font-family:var(--font-body); font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+    color:var(--muted); margin-bottom:var(--space-2); }
+  .kpi-card .value{ font-family:var(--font-display); font-size:36px; letter-spacing:.5px; color:var(--plum-deep); line-height:1; font-variant-numeric:tabular-nums; }
+  #kpiOil .value{ color:var(--amber); }
+  .kpi-card .caption{ margin-top:var(--space-2); font-size:12px; color:var(--muted); line-height:1.4; }
+  @media (prefers-reduced-motion: no-preference){
+    .kpi-card.in{ animation:cardIn var(--duration-slow) var(--ease-spring) forwards; }
+    @keyframes cardIn{ to{ opacity:1; transform:translateY(0); } }
+  }
+  @media (prefers-reduced-motion: reduce){ .kpi-card{ opacity:1; transform:none; } }
+
+  /* Bots section */
+  .section-title{ font-family:var(--font-display); font-size:20px; letter-spacing:.5px; color:var(--plum-deep); margin:0 0 var(--space-4); }
+  .bots-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(84px,1fr)); gap:var(--space-3); margin-bottom:var(--space-8); }
+  .bot-tile{ background:var(--card); border:1px solid var(--line); border-radius:var(--r-md); box-shadow:var(--shadow-sm); overflow:hidden; text-align:center; }
+  .bot-tile .img-wrap{ width:100%; aspect-ratio:1/1; background:var(--plum); display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  .bot-tile img{ width:100%; height:100%; object-fit:cover; image-rendering:pixelated; }
+  .bot-tile .swatch{ font-family:var(--font-display); font-size:15px; color:#fff; }
+  .bot-tile .num{ font-family:var(--font-display); font-size:13px; color:var(--plum); padding:5px 0; }
+
+  .empty-state, .info-state{ background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg); box-shadow:var(--shadow-sm);
+    padding:var(--space-5); text-align:center; color:var(--muted); font-size:14px; margin-bottom:var(--space-8); }
+  .info-state.error{ color:var(--red); }
+
+  /* Play-the-games card */
+  .game-card{ display:flex; align-items:center; justify-content:space-between; gap:var(--space-4);
+    background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg); box-shadow:var(--shadow-md);
+    padding:var(--space-5) var(--space-6); text-decoration:none; color:inherit;
+    transition:transform var(--duration-normal) var(--ease-smooth), box-shadow var(--duration-normal) var(--ease-smooth), border-color var(--duration-fast); }
+  .game-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--amber); }
+  .game-card .t{ font-family:var(--font-display); font-size:18px; letter-spacing:.5px; color:var(--plum-deep); }
+  .game-card .s{ font-size:13px; color:var(--muted); margin-top:3px; }
+  .game-card .arrow{ font-family:var(--font-display); font-size:22px; color:var(--amber); }
+
+  footer{ text-align:center; margin-top:var(--space-12); font-size:12px; color:var(--muted); line-height:1.7; }
+  footer a{ color:var(--plum); text-decoration:none; }
+  footer a:hover{ color:var(--amber); }
+
+  .center-msg{ text-align:center; padding:var(--space-10) 0; }
+  .center-msg p{ color:var(--muted); font-size:15px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <span class="pill">BOT GAMES</span>
+
+  <div class="header">
+    <img class="icon" src="https://arweave.net/_cPSCheRvzVBlZK7QwM-3nXtteMdBbUn-zJhbGRlMmo/106.png" alt="Bot #106" onerror="this.style.display='none'">
+    <div>
+      <h1>HOLDER DASHBOARD</h1>
+      <p>Your $OIL balance and FinnBot holdings, in one place.</p>
+    </div>
+  </div>
+
+  <div class="wallet-bar">
+    <div id="walletInfo">
+      <span class="status-badge disconnected"><span class="dot"></span>Not connected</span>
+    </div>
+    <div id="walletActions">
+      <button class="btn-primary" id="connectBtn">Connect wallet</button>
+    </div>
+  </div>
+
+  <div id="content" style="display:none;">
+
+    <div class="kpi-grid" id="kpiGrid">
+      <div class="kpi-card" id="kpiOil">
+        <div class="label">$OIL balance</div>
+        <div class="value" id="oilValue">—</div>
+        <div class="caption">Live wallet balance</div>
+      </div>
+      <div class="kpi-card" id="kpiBots">
+        <div class="label">Bots held</div>
+        <div class="value" id="botsValue">—</div>
+        <div class="caption">Across all FinnBot editions</div>
+      </div>
+      <div class="kpi-card" id="kpiRate">
+        <div class="label">Daily earn rate</div>
+        <div class="value" id="rateValue">—</div>
+        <div class="caption">Accrues daily, paid in the weekly batch — not instant</div>
+      </div>
+    </div>
+
+    <h2 class="section-title">Your Bots</h2>
+    <div id="botsSection">
+      <div class="empty-state" id="botsEmpty" style="display:none;">
+        No Bots found in this wallet yet.
+      </div>
+      <div class="bots-grid" id="botsGrid"></div>
+    </div>
+
+  </div>
+
+  <div class="center-msg" id="preConnectMsg">
+    <p>Connect your wallet to see your $OIL balance and Bots.</p>
+  </div>
+
+  <a class="game-card" href="https://games.finnstergram.com/" target="_blank" rel="noopener">
+    <div>
+      <div class="t">🎮 PLAY THE GAMES →</div>
+      <div class="s">The full FinnBots arcade — free &amp; $OIL, new games often.</div>
+    </div>
+    <div class="arrow">↗</div>
+  </a>
+
+  <footer>
+    <a href="https://games.finnstergram.com/" target="_blank" rel="noopener">Games</a> ·
+    <a href="https://magiceden.io/marketplace/finnbot" target="_blank" rel="noopener">Buy a Bot</a><br>
+    FinnBots · $OIL is a utility token with no promise of value or return
+  </footer>
+
+</div>
+
+<!-- ?v= query strings are cache-busters: bump on every deploy so no browser
+     (Chrome, Safari, or Phantom's webview) can silently run stale copies. -->
+<script src="phantom-deeplink-libs.min.js?v=20260917a"></script>
+<script src="phantom-mobile.js?v=20260917a"></script>
+<script>
+(function () {
+  'use strict';
+
+  // Build tag — bump on every deploy, in lockstep with the ?v= strings above.
+  var BUILD_TAG = 'hd-v3-20260917a';
+  console.log('[holder-dashboard] build', BUILD_TAG);
+
+  // ===== Config — public, non-secret values only =====
+  var RPC_PROXY = 'https://finnbots-rpc.mart-kin1000.workers.dev';
+  var OIL_MINT = 'HrcfXJcFdMoLfbkN5qCTSFrLsAgJNHitmwKc5AyS7xzf';
+  var TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+  var ARWEAVE_BASE = 'https://arweave.net/_cPSCheRvzVBlZK7QwM-3nXtteMdBbUn-zJhbGRlMmo';
+  var EMISSION_RATE = 10; // OIL per Bot per day
+  var BOTS_IDS_URL = 'bots_ids.json'; // { "<mint address>": <bot number>, ... }
+
+  var connectBtn = document.getElementById('connectBtn');
+  var walletInfo = document.getElementById('walletInfo');
+  var walletActions = document.getElementById('walletActions');
+  var content = document.getElementById('content');
+  var preConnectMsg = document.getElementById('preConnectMsg');
+  var oilValue = document.getElementById('oilValue');
+  var botsValue = document.getElementById('botsValue');
+  var rateValue = document.getElementById('rateValue');
+  var botsGrid = document.getElementById('botsGrid');
+  var botsEmpty = document.getElementById('botsEmpty');
+
+  var botsIdsMap = null; // loaded once
+
+  function shortAddr(a) {
+    return a.slice(0, 4) + '…' + a.slice(-4);
+  }
+
+  function showError(msg) {
+    var el = document.createElement('div');
+    el.className = 'info-state error';
+    el.textContent = msg;
+    content.parentNode.insertBefore(el, content.nextSibling);
+  }
+
+  // Raw JSON-RPC call through the Cloudflare Worker proxy.
+  // Deliberately uses plain fetch (no @solana/web3.js Connection object) —
+  // matches the proven holder-check pattern from Pick-a-Bot, avoids the
+  // solana-client CORS header issue entirely since we never build or send
+  // a transaction from this page.
+  function rpc(method, params) {
+    return fetch(RPC_PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: method, params: params })
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (json) {
+        if (json.error) { throw new Error(json.error.message || 'RPC error'); }
+        return json.result;
+      });
+  }
+
+  function loadBotsIdsMap() {
+    if (botsIdsMap) return Promise.resolve(botsIdsMap);
+    return fetch(BOTS_IDS_URL)
+      .then(function (res) {
+        if (!res.ok) throw new Error('bots_ids.json not found');
+        return res.json();
+      })
+      .then(function (json) {
+        botsIdsMap = json;
+        return json;
+      });
+  }
+
+  function getOilBalance(owner) {
+    return rpc('getTokenAccountsByOwner', [
+      owner,
+      { mint: OIL_MINT },
+      { encoding: 'jsonParsed' }
+    ]).then(function (result) {
+      if (!result || !result.value || !result.value.length) return 0;
+      var total = 0;
+      result.value.forEach(function (acc) {
+        var amt = acc.account.data.parsed.info.tokenAmount;
+        total += amt.uiAmount || 0;
+      });
+      return total;
+    });
+  }
+
+  function getHeldBots(owner, botsMap) {
+    return rpc('getTokenAccountsByOwner', [
+      owner,
+      { programId: TOKEN_PROGRAM_ID },
+      { encoding: 'jsonParsed' }
+    ]).then(function (result) {
+      var held = [];
+      if (!result || !result.value) return held;
+      result.value.forEach(function (acc) {
+        var info = acc.account.data.parsed.info;
+        var amt = info.tokenAmount;
+        if (amt.decimals === 0 && Number(amt.amount) >= 1 && botsMap[info.mint] !== undefined) {
+          held.push({ mint: info.mint, number: botsMap[info.mint] });
+        }
+      });
+      held.sort(function (a, b) { return a.number - b.number; });
+      return held;
+    });
+  }
+
+  function renderBots(botList) {
+    botsGrid.innerHTML = '';
+    if (!botList.length) {
+      botsEmpty.style.display = 'block';
+      return;
+    }
+    botsEmpty.style.display = 'none';
+    botList.forEach(function (bot) {
+      var tile = document.createElement('div');
+      tile.className = 'bot-tile';
+
+      var imgWrap = document.createElement('div');
+      imgWrap.className = 'img-wrap';
+
+      var img = document.createElement('img');
+      img.src = ARWEAVE_BASE + '/' + bot.number + '.png';
+      img.alt = 'Bot #' + bot.number;
+      img.loading = 'lazy';
+      img.onerror = function () {
+        imgWrap.innerHTML = '<span class="swatch">#' + bot.number + '</span>';
+      };
+      imgWrap.appendChild(img);
+
+      var num = document.createElement('div');
+      num.className = 'num';
+      num.textContent = '#' + bot.number;
+
+      tile.appendChild(imgWrap);
+      tile.appendChild(num);
+      botsGrid.appendChild(tile);
+    });
+  }
+
+  function animateKpiCards() {
+    var cards = document.querySelectorAll('.kpi-card');
+    cards.forEach(function (card, i) {
+      setTimeout(function () { card.classList.add('in'); }, i * 60);
+    });
+  }
+
+  function loadDashboard(owner) {
+    preConnectMsg.style.display = 'none';
+    content.style.display = 'block';
+    animateKpiCards();
+
+    Promise.all([
+      loadBotsIdsMap().catch(function (err) {
+        showError('Could not load the Bot list (' + err.message + '). Balance will still work.');
+        return {};
+      }),
+      getOilBalance(owner).catch(function (err) {
+        oilValue.textContent = '—';
+        showError('Could not load $OIL balance: ' + err.message);
+        return null;
+      })
+    ]).then(function (results) {
+      var botsMap = results[0];
+      var oilBal = results[1];
+
+      if (oilBal !== null) {
+        oilValue.textContent = oilBal.toLocaleString(undefined, { maximumFractionDigits: 2 });
+      }
+
+      return getHeldBots(owner, botsMap).catch(function (err) {
+        showError('Could not load Bot holdings: ' + err.message);
+        return [];
+      });
+    }).then(function (heldBots) {
+      botsValue.textContent = heldBots.length;
+      rateValue.textContent = (heldBots.length * EMISSION_RATE).toLocaleString() + ' OIL';
+      renderBots(heldBots);
+    });
+  }
+
+  function setConnectedUI(owner) {
+    walletInfo.innerHTML =
+      '<span class="status-badge connected"><span class="dot"></span><span class="addr">' + shortAddr(owner) + '</span></span>';
+    walletActions.innerHTML = '<button class="btn-secondary" id="disconnectBtn">Disconnect</button>';
+    document.getElementById('disconnectBtn').addEventListener('click', function () {
+      window.location.reload();
+    });
+  }
+
+  function getProvider(){
+    if(window.phantom && window.phantom.solana && window.phantom.solana.isPhantom) return window.phantom.solana;
+    if(window.solana && window.solana.isPhantom) return window.solana;
+    return null;
+  }
+  function isMobileUA(){
+    return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '');
+  }
+
+  connectBtn.addEventListener('click', function () {
+    var provider = getProvider();
+    if (!provider) {
+      // No injected provider. On mobile (Chrome/Edge on iOS never get one —
+      // iOS platform restriction) use Phantom's deeplink connect: jump to the
+      // Phantom app, approve, land back here with an encrypted response we
+      // can decrypt via the key carried in the return URL. Proven pattern
+      // from Pick-a-Bot (6 July 2026).
+      if (window.PhantomMobile && isMobileUA()) {
+        connectBtn.disabled = true;
+        connectBtn.textContent = 'Opening Phantom…';
+        PhantomMobile.connect(window.location.origin + window.location.pathname);
+        return;
+      }
+      showError('Phantom wallet not found. Install it from phantom.app, then reload this page.');
+      return;
+    }
+    connectBtn.disabled = true;
+    connectBtn.textContent = 'Connecting…';
+
+    provider.connect()
+      .then(function (resp) {
+        var owner = resp.publicKey.toString();
+        setConnectedUI(owner);
+        loadDashboard(owner);
+      })
+      .catch(function () {
+        connectBtn.disabled = false;
+        connectBtn.textContent = 'Connect wallet';
+      });
+  });
+
+  // ---- Mobile deeplink resume — runs once per page load ----
+  // Landing back from Phantom (often in a brand-NEW tab of Phantom's own
+  // browser — storage never survives that jump, so everything needed is
+  // carried in the URL and decrypted here). Decrypt FIRST; the injected
+  // provider is only a bonus path for browsers that have it.
+  var phantomAction = new URLSearchParams(window.location.search).get('phantom_action');
+  var rawReturnParams = window.location.search; // captured before any stripping
+  if (phantomAction && window.PhantomMobile) {
+    connectBtn.disabled = true;
+    connectBtn.textContent = 'Finishing connection…';
+    var result = PhantomMobile.consumePendingRedirect();
+    if (result && result.type === 'connect') {
+      setConnectedUI(result.publicKey);
+      loadDashboard(result.publicKey);
+    } else {
+      connectBtn.disabled = false;
+      connectBtn.textContent = 'Connect wallet';
+      var failMsg = (result && result.type === 'error') ? result.message
+        : 'The connection didn’t complete — tap Connect wallet to try again.';
+      showError(failMsg +
+        ' [DIAGNOSTIC ' + BUILD_TAG + ' — screenshot if reporting: ' +
+        (rawReturnParams ? rawReturnParams.slice(0, 600) : '(empty)') + ']');
+    }
+  } else if (window.PhantomMobile && PhantomMobile.hasSession()) {
+    // Same-tab refresh with a live deeplink session — restore silently.
+    var sessOwner = PhantomMobile.getSessionPublicKey();
+    if (sessOwner) { setConnectedUI(sessOwner); loadDashboard(sessOwner); }
+  } else if (getProvider()) {
+    // Attempt silent reconnect if already trusted (extension / Phantom browser)
+    getProvider().connect({ onlyIfTrusted: true })
+      .then(function (resp) {
+        var owner = resp.publicKey.toString();
+        setConnectedUI(owner);
+        loadDashboard(owner);
+      })
+      .catch(function () { /* not previously trusted — wait for manual connect */ });
+  }
+})();
+</script>
+
+</body>
+</html>
